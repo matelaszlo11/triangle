@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style type="text/css">
+      body {
+        background: gray;
+      }
+
+      canvas {
+        position: absolute;
+        display: block;
+        width: 256px;
+        height: 256px;
+        top: 50%;
+        left: 50%;
+        margin-left: -128px;
+        margin-top: -128px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <canvas id="canvas" width="256" height="256">
+    </canvas>
+
+    <script type="text/javascript">
+      function clear(id) {
+        var data = id.data,
+            i    = data.length
+
+        while(i) {
+          data[--i] = 0
+          i -= 3
+        }
+      }
+
+      function triangle(id, texture, ax, ay, au, av, bx, by, bu, bv, cx, cy, cu, cv) {
+        var minX = Math.floor(Math.min(ax, bx, cx)),
+            maxX = Math.floor(Math.max(ax, bx, cx)),
+            minY = Math.floor(Math.min(ay, by, cy)),
+            maxY = Math.floor(Math.max(ay, by, cy)),
+            ux   = bx - ax,
+            uy   = by - ay,
+            vx   = cx - ax,
+            vy   = cy - ay,
+            duu  = ux * ux + uy * uy,
+            duv  = ux * vx + uy * vy,
+            dvv  = vx * vx + vy * vy,
+            inv  = 1 / (duu * dvv - duv * duv),
+            i    = (minY * id.width + minX) * 4,
+            step = (id.width + minX - maxX) * 4,
+            x, y, wx, wy, duw, dvw, u, v, m, n, o0, o1, o2, o3
+
+        for(y = minY; y <= maxY; i += step, ++y) {
+          for(x = minX; x < maxX; ++x) {
+            wx  = x - ax
+            wy  = y - ay
+            duw = ux * wx + uy * wy
+            dvw = vx * wx + vy * wy
+            u   = (dvv * duw - duv * dvw) * inv
+            v   = (duu * dvw - duv * duw) * inv
+
+            if(u < 0 || v < 0 || u + v >= 1) {
+              i += 4
+              continue
+            }
+
+            m = au + (bu - au) * u + (cu - au) * v
+            n = av + (bv - av) * u + (cv - av) * v
+            u = Math.floor(m)
+            m -= u
+            v = Math.floor(n)
+            n -= v
+
+            o0 = (v * texture.width + u) * 4
+            o1 = o0 + 4
+            o2 = o0 + texture.width * 4
+            o3 = o0 + texture.width * 4 + 4
+
+            /* Lerp lerp lerp! */
+            id.data[i++] = (texture.data[o0++] * (1 - m) + texture.data[o1++] * m) * (1 - n) + (texture.data[o2++] * (1 - m) + texture.data[o3++] * m) * n
+            id.data[i++] = (texture.data[o0++] * (1 - m) + texture.data[o1++] * m) * (1 - n) + (texture.data[o2++] * (1 - m) + texture.data[o3++] * m) * n
+            id.data[i++] = (texture.data[o0++] * (1 - m) + texture.data[o1++] * m) * (1 - n) + (texture.data[o2++] * (1 - m) + texture.data[o3++] * m) * n
+            id.data[i++] = (texture.data[o0++] * (1 - m) + texture.data[o1++] * m) * (1 - n) + (texture.data[o2++] * (1 - m) + texture.data[o3++] * m) * n
+          }
+        }
+      }
+
+      var canvas  = document.getElementById("canvas"),
+          ctx     = canvas.getContext("2d"),
+          id      = ctx.getImageData(0, 0, canvas.width, canvas.height),
+          texture = new Image()
+
+      texture.src = "darkskylogo.png"
+      texture.onload = function() {
+        ctx.drawImage(texture, 0, 0, 256, 256)
+        texture = ctx.getImageData(0, 0, 256, 256)
+        ctx.clearRect(0, 0, canvas.width, canvas.height)
+
+        var start = Date.now()
+
+        setInterval(function() {
+          var millis = Date.now() - start,
+              a      = millis * Math.PI / 4000,
+              b      = a + Math.PI * 2 / 3,
+              c      = a + Math.PI * 4 / 3
+
+          clear(id)
+          triangle(
+            id,
+            texture,
+            128 + Math.cos(a) * 128, 128 - Math.sin(a) * 128, 128,   5,
+            128 + Math.cos(b) * 128, 128 - Math.sin(b) * 128,   0, 227,
+            128 + Math.cos(c) * 128, 128 - Math.sin(c) * 128, 256, 227
+          )
+          ctx.putImageData(id, 0, 0)
+        }, 0)
+      }
+    </script>
+  </body>
+</html>
